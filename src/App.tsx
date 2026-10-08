@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArchitectureModel, Component, Dependency, TargetArchitectureLayer, ServiceBoundary } from './types/architecture';
+import React, { useState, useMemo } from 'react';
+import { ArchitectureModel, Component, Dependency } from './types/architecture';
 import {
   SAMPLE_COMPONENTS,
   SAMPLE_DEPENDENCIES,
@@ -12,24 +12,27 @@ import {
   runClassicalSimulatedAnnealing,
   runQuantumInspiredAnnealing,
 } from './services/quboSolvers';
-import { Header, SolverType } from './components/Header';
-import { HowItWorksSection } from './components/HowItWorksSection';
+import { Sidebar, TabType } from './components/Sidebar';
+import { SolverType } from './components/Header';
+import { DocumentationTab } from './components/DocumentationTab';
 import { InputPanel } from './components/InputPanel';
 import { InventoryTab } from './components/InventoryTab';
 import { DependencyGraphTab } from './components/DependencyGraphTab';
 import { ArchitectureModelTab } from './components/ArchitectureModelTab';
 import { LineageTab } from './components/LineageTab';
+import { ImpactAnalysisView } from './components/ImpactAnalysisView';
 import { BenchmarkTab } from './components/BenchmarkTab';
 import { ExportTab } from './components/ExportTab';
 import {
-  Table2,
-  Network,
   Layers,
-  GitBranch,
-  BarChart2,
-  Download,
   AlertTriangle,
-  Info,
+  ShieldCheck,
+  Cpu,
+  Sparkles,
+  Database,
+  ArrowRight,
+  RefreshCw,
+  Terminal,
 } from 'lucide-react';
 
 export default function App() {
@@ -47,16 +50,11 @@ export default function App() {
   // Input Text State
   const [inputArtifacts, setInputArtifacts] = useState<string>(RAW_SAMPLE_SCRIPT_TEXT);
 
-  // Active Output Tab
-  const [activeTab, setActiveTab] = useState<
-    'inventory' | 'graph' | 'model' | 'lineage' | 'benchmark' | 'export'
-  >('inventory');
+  // Active Output Tab (Sidebar Navigation)
+  const [activeTab, setActiveTab] = useState<TabType>('docs');
 
   // Active QUBO Solver
   const [currentSolver, setCurrentSolver] = useState<SolverType>('classical');
-
-  // How It Works Visibility
-  const [showHowItWorks, setShowHowItWorks] = useState<boolean>(true);
 
   // Loading & Error States
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -66,6 +64,11 @@ export default function App() {
   // Selected Report for Lineage Drilldown
   const [lineageSelectedReportId, setLineageSelectedReportId] = useState<string>(
     'rpt_executive_kpi_dashboard'
+  );
+
+  // Selected Table for Deletion Impact Analysis
+  const [impactSelectedTableId, setImpactSelectedTableId] = useState<string>(
+    'raw_customers_cdc'
   );
 
   // Compute Active QUBO Module Partitions based on selected solver
@@ -94,7 +97,7 @@ export default function App() {
       serviceBoundaries: SAMPLE_SERVICE_BOUNDARIES,
     });
     setErrorMessage('');
-    setStatusMessage('Loaded sample legacy system: 25 tables, 12 ETL jobs, 8 reports, and 3 apps.');
+    setStatusMessage('Loaded sample legacy estate: 25 tables, 12 ETL jobs, 8 reports, and 3 apps.');
     setTimeout(() => setStatusMessage(''), 4000);
   };
 
@@ -149,7 +152,6 @@ export default function App() {
       setErrorMessage(
         err.message || 'Failed to call Gemini API. Using fallback offline parser for your SQL input.'
       );
-      // If server failed (e.g. key missing), keep current model or inform user
     } finally {
       setIsAnalyzing(false);
     }
@@ -160,131 +162,139 @@ export default function App() {
     setActiveTab('lineage');
   };
 
+  const handleSelectComponentForImpact = (comp: Component) => {
+    setImpactSelectedTableId(comp.id);
+    setActiveTab('impact');
+  };
+
+  const getTabTitle = (tab: TabType) => {
+    switch (tab) {
+      case 'docs':
+        return 'System Documentation & Architectural Guide';
+      case 'input':
+        return 'Legacy System Ingestion & Code Upload';
+      case 'inventory':
+        return 'Component Inventory & Debt Catalog';
+      case 'graph':
+        return 'Dependency Topology & QUBO Graph Partitioning';
+      case 'model':
+        return 'Architecture Model: As-Is vs To-Be Target';
+      case 'lineage':
+        return 'Backward Data Lineage & Root Cause Trace';
+      case 'impact':
+        return 'Downstream Impact Analysis & Blast Radius Simulator';
+      case 'benchmark':
+        return 'QUBO Solvers Benchmark & Empirical Energy Descent';
+      case 'export':
+        return 'Visual Diagram & Executive PDF Export Engine';
+      default:
+        return 'QuantumLens Workspace';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Header */}
-      <Header
+    <div className="min-h-screen bg-black text-zinc-100 flex flex-row font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Sleek Dark Left Sidebar */}
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
         currentSolver={currentSolver}
         onSelectSolver={setCurrentSolver}
         componentCount={model.components.length}
         dependencyCount={model.dependencies.length}
-        onOpenHowItWorks={() => setShowHowItWorks(true)}
+        onLoadSampleSystem={handleLoadSample}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* How It Works Section on First Screen */}
-        {showHowItWorks && (
-          <HowItWorksSection
-            isDismissible={true}
-            onDismiss={() => setShowHowItWorks(false)}
-          />
-        )}
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-black">
+        {/* Top Header Bar */}
+        <header className="h-14 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-20 shrink-0">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+              <span className="text-indigo-400 font-mono text-xs font-normal">/</span>
+              <span>{getTabTitle(activeTab)}</span>
+            </h1>
+          </div>
 
-        {/* Input & Upload Panel */}
-        <InputPanel
-          inputArtifacts={inputArtifacts}
-          onInputChange={setInputArtifacts}
-          onLoadSampleSystem={handleLoadSample}
-          onAnalyzeSystem={handleAnalyzeSystem}
-          isAnalyzing={isAnalyzing}
-          statusMessage={statusMessage}
-          errorMessage={errorMessage}
-        />
-
-        {/* Output Tabs Navigation */}
-        <div className="border-b border-slate-200">
-          <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto pb-px" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'inventory'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <Table2 className="h-4 w-4" />
-              <span>Inventory</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold">
-                {model.components.length}
+          <div className="flex items-center space-x-4 text-xs">
+            {/* Live Metrics */}
+            <div className="hidden md:flex items-center space-x-3 text-zinc-400 text-xs">
+              <span>
+                Estate: <strong className="text-white font-mono">{model.components.length}</strong> components
               </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('graph')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'graph'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <Network className="h-4 w-4" />
-              <span>Dependency Graph</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold">
-                {model.dependencies.length}
+              <span>•</span>
+              <span>
+                Edges: <strong className="text-white font-mono">{model.dependencies.length}</strong> links
               </span>
-            </button>
+              <span>•</span>
+              <span className="text-indigo-400 font-semibold flex items-center gap-1">
+                <Cpu className="h-3.5 w-3.5" />
+                {currentSolver === 'classical' ? 'Solver A (SA)' : 'Solver B (QIA)'}
+              </span>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('model')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'model'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <Layers className="h-4 w-4" />
-              <span>Architecture Model</span>
-            </button>
+            {/* Quick Action to switch to Ingestion */}
+            {activeTab !== 'input' && (
+              <button
+                onClick={() => setActiveTab('input')}
+                className="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold border border-zinc-700/80 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Terminal className="h-3 w-3 text-cyan-400" />
+                <span>Ingest Code</span>
+              </button>
+            )}
+          </div>
+        </header>
 
-            <button
-              onClick={() => setActiveTab('lineage')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'lineage'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <GitBranch className="h-4 w-4" />
-              <span>Data Flow & Lineage</span>
-            </button>
+        {/* Tab Content Canvas */}
+        <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+          {/* Documentation Tab */}
+          {activeTab === 'docs' && (
+            <DocumentationTab
+              onNavigateToTab={(tab) => setActiveTab(tab)}
+              onLoadSampleSystem={handleLoadSample}
+            />
+          )}
 
-            <button
-              onClick={() => setActiveTab('benchmark')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'benchmark'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <BarChart2 className="h-4 w-4" />
-              <span>Solver Benchmark</span>
-            </button>
+          {/* Ingestion & Artifacts Tab */}
+          {activeTab === 'input' && (
+            <div className="space-y-6">
+              <InputPanel
+                inputArtifacts={inputArtifacts}
+                onInputChange={setInputArtifacts}
+                onLoadSampleSystem={handleLoadSample}
+                onAnalyzeSystem={handleAnalyzeSystem}
+                isAnalyzing={isAnalyzing}
+                statusMessage={statusMessage}
+                errorMessage={errorMessage}
+              />
+              <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white mb-0.5">Ready to explore discovered artifacts?</h4>
+                  <p className="text-xs text-zinc-400">View the cataloged components, deduplication candidates, and orphan tables.</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('inventory')}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Go to Inventory</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
-            <button
-              onClick={() => setActiveTab('export')}
-              className={`py-3 px-3.5 border-b-2 font-semibold text-xs whitespace-nowrap flex items-center gap-2 cursor-pointer transition-colors ${
-                activeTab === 'export'
-                  ? 'border-indigo-600 text-indigo-700 bg-white/70 rounded-t-lg'
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-              }`}
-            >
-              <Download className="h-4 w-4" />
-              <span>Export</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Panels */}
-        <div>
+          {/* Component Inventory Tab */}
           {activeTab === 'inventory' && (
             <InventoryTab
               components={model.components}
               dependencies={model.dependencies}
               onSelectComponentForLineage={handleSelectComponentForLineage}
+              onSelectComponentForImpact={handleSelectComponentForImpact}
             />
           )}
 
+          {/* Dependency Graph Tab */}
           {activeTab === 'graph' && (
             <DependencyGraphTab
               components={model.components}
@@ -292,9 +302,11 @@ export default function App() {
               moduleAssignments={moduleAssignments}
               numModules={4}
               onSelectComponentForLineage={handleSelectComponentForLineage}
+              onSelectComponentForImpact={handleSelectComponentForImpact}
             />
           )}
 
+          {/* Architecture Model Tab */}
           {activeTab === 'model' && (
             <ArchitectureModelTab
               components={model.components}
@@ -304,6 +316,7 @@ export default function App() {
             />
           )}
 
+          {/* Data Flow & Lineage Tab */}
           {activeTab === 'lineage' && (
             <LineageTab
               components={model.components}
@@ -312,6 +325,17 @@ export default function App() {
             />
           )}
 
+          {/* Impact Analysis & Blast Radius Tab */}
+          {activeTab === 'impact' && (
+            <ImpactAnalysisView
+              components={model.components}
+              dependencies={model.dependencies}
+              initialSelectedTableId={impactSelectedTableId}
+              onNavigateToLineage={handleSelectComponentForLineage}
+            />
+          )}
+
+          {/* QUBO Solver Benchmark Tab */}
           {activeTab === 'benchmark' && (
             <BenchmarkTab
               components={model.components}
@@ -320,23 +344,23 @@ export default function App() {
             />
           )}
 
+          {/* Diagram & PDF Export Tab */}
           {activeTab === 'export' && <ExportTab model={model} />}
-        </div>
-      </main>
+        </main>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white py-4 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            <strong>QuantumLens: Architecture Recovery</strong> — Enterprise Data Estate Reverse-Engineering & QUBO Partitioning.
-          </div>
-          <div className="flex items-center space-x-3 text-slate-400">
-            <span>Simulated Annealing + Quantum-Inspired Ising Model</span>
+        {/* Bottom Status Footer */}
+        <footer className="mt-auto border-t border-zinc-900 bg-zinc-950 px-6 py-3 text-xs text-zinc-500 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span>QuantumLens Engine Active</span>
             <span>•</span>
-            <span className="text-amber-700 font-medium">Expert Review Recommended</span>
+            <span>EchoFlow Black Workspace Mode</span>
           </div>
-        </div>
-      </footer>
+          <div className="text-[11px] text-zinc-500">
+            AI-generated models need expert human review.
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

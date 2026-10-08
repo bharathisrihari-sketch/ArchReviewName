@@ -2,5 +2,7 @@
   "name": "QuantumLens: Architecture Recovery",
   "description": "Reverse-engineer legacy data architectures, extract dependencies, optimize modularity via QUBO annealing, and synthesize target architectures.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
